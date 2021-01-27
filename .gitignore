@@ -30,3 +30,13 @@
 *.exe
 *.out
 *.app
+
+# Folders
+Debug/
+Release/
+_UpgradeReport_Files/
+.vs/
+Backup/
+
+# XXX
+UpgradeLog.*
