@@ -1,0 +1,25 @@
+unzFile m_zip;
+m_zip = unzOpen( ".\\data\\0\\_" );
+
+
+
+void* CGame2DObject::GetBufFromZip(char* name)
+{
+	void *buffer=NULL;
+
+	int mError = unzLocateFile( zip, name, 1 );
+	if(mError!=UNZ_OK)return NULL;
+	if( unzOpenCurrentFile( zip ) != UNZ_OK )return NULL;
+	if( unzOpenCurrentFilePassword(zip,"dk5r0dgn_we367bldg92d)df") != UNZ_OK )return NULL;
+	unzGetCurrentFileInfo( zip, &info, NULL, 0, NULL, 0, NULL, 0 );
+	buffer = malloc( info.uncompressed_size );
+	if( !buffer )
+	{
+		unzCloseCurrentFile( zip );
+		unzClose( zip );
+		return NULL;
+	}
+	unzReadCurrentFile( zip, buffer, info.uncompressed_size );
+	unzCloseCurrentFile( zip );
+	return buffer;
+}
