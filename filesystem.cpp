@@ -61,32 +61,90 @@ char *ConvertFilename(char *pFilename)
 /******************************************************************************
 *                             Private - НАЧАЛО                                *
 ******************************************************************************/
-// Если маска длиннее тестируемой строки, то возможен неверный результат. ИСПРАВИТЬ!!!
-// P.S. Кажется исправил. Проверить!!!
+//// Если маска длиннее тестируемой строки, то возможен неверный результат. ИСПРАВИТЬ!!!
+//// P.S. Кажется исправил. Проверить!!!
+//bool CFileStorage::IsMatchingString(const char *pMask,const char *pString)const
+//  {
+//    char *pMaskPointer=(char *)pMask;
+//    char *pStringPointer=(char *)pString;
+//
+//    while(*pStringPointer)
+//      {
+//        switch(*pMaskPointer)
+//          {
+//            case '\0':
+//              return false;
+//            case '*':
+//              if(!(*(pMaskPointer+1)^*pStringPointer))pMaskPointer+=2;
+//              break;
+//            case '?':
+//              pMaskPointer++;
+//              break;
+//            default:
+//              if(*pMaskPointer^*pStringPointer)return false;
+//              pMaskPointer++;
+//          }
+//        pStringPointer++;
+//      }
+//    return !*pMaskPointer||(!(*pMaskPointer^'*')&&!*(pMaskPointer+1));//true;
+//  }
 bool CFileStorage::IsMatchingString(const char *pMask,const char *pString)const
   {
-    char *pMaskPointer=(char *)pMask;
-    char *pStringPointer=(char *)pString;
+    const char *pMaskPointer=pMask;
+    // Точка возврата маски. Либо она указывает на последний испытанный символ '*',
+    // либо точка - нулевой указатель, если в маске нет ни одного символа '*'.
+    const char *pMaskReturnPoint=0;
+    const char *pStringPointer=pString;
 
     while(*pStringPointer)
       {
         switch(*pMaskPointer)
           {
-            case '\0':
-              return false;
             case '*':
-              if(!(*(pMaskPointer+1)^*pStringPointer))pMaskPointer+=2;
+              // Пропускаем все, идущие подряд, символы '*' в маске и останавливаемся на последнем в серии.
+              while(*(pMaskPointer+1)=='*')++pMaskPointer;
+              // Если текущий символ '*' - последний символ маски, то строка удовлетворяет маске.
+              if(!*(pMaskPointer+1))return true;
+              // Запоминаем точку возврата.
+              pMaskReturnPoint=pMaskPointer;
+              // Бежим по строке до тех пор, пока символ из строки не совпадёт с символом из маски следующим за '*'.
+              while(*pStringPointer&&(*(pMaskPointer+1)^*pStringPointer))++pStringPointer;
+              // Если после пробежки прибежали к концу строки, то строка не удовлетворяет маске.
+              if(!*pStringPointer)return false;
+              // Строка не закончилась, пока совпадение наблюдается, смотрим, что будет дальше.
+              // Сдвигаемся на два шага по маске на символ после того, что совпал со строкой,
+              // с которым обнаружилось совпадение строки и маски и переходим в режим проверки обычных символов.
+              pMaskPointer+=2;
               break;
             case '?':
-              pMaskPointer++;
+              // Просто переходим к следующему символу маски, считая, что '?' совпадает с любым символом строки.
+              ++pMaskPointer;
               break;
             default:
-              if(*pMaskPointer^*pStringPointer)return false;
-              pMaskPointer++;
+              // Бежим параллельно по маске и строке, пока не придём к концу маски или строки или не придём к несовпадению,
+              // или не встретим специальный символ.
+              while(*pMaskPointer&&*pStringPointer&&*pMaskPointer==*pStringPointer&&(*pMaskPointer^'*')&&(*pMaskPointer^'?'))++pMaskPointer,++pStringPointer;
+              // Вышли, потому что в маске встретился символ '*' или '?'? Переходим в соответствующий режим проверки.
+              // Пока совпадение есть.
+              if(*pMaskPointer=='*'||*pMaskPointer=='?')continue;
+              // Если после пробежки одновременно прибежали и к концу маски, и к концу строки - строка удовлетворяет маске.
+              // Если после пробежки прибежали к концу строки, но маска ещё не кончилась - строка не удовлетворяет маске.
+              if(!*pStringPointer)return !*pMaskPointer;
+              // Если после пробежки строка не кончилась, то совпадения пока нет, но может быть оно будет позже.
+              // Возвращаемся к точке возврата в маске, если она есть. Если её нет, то строка не удовлетворяет маске.
+              {
+              // Точки возврата нет - строка не удовлетворяет маске.
+              if(!pMaskReturnPoint)return false;
+              // Возвращаемся по маске в точку возврата. Возможно совпадения будут дальше.
+              pMaskPointer=pMaskReturnPoint;
+              // Несовпавший символ нужно проверить ещё раз, начиная с точки невозврата.
+              continue;
+              }
           }
-        pStringPointer++;
+        ++pStringPointer;
       }
-    return !*pMaskPointer||(!(*pMaskPointer^'*')&&!*(pMaskPointer+1));//true;
+    // Строка закончилась, но ни одного совпадения найдено не было. Строка не удовлетворяет маске.
+    return false;
   }
 size_t CFileStorage::Unify(std::vector <VNTFS_FIND_RESULT> &filelist)
   {
